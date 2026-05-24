@@ -73,7 +73,7 @@ function RegistroForm({
           {state?.error && (
             <div className="mb-4 rounded-xl bg-red-50 border border-red-100 p-4 text-sm text-red-600 font-medium">
               {state.error}
-              {state.formErrors?.length > 0 && (
+              {(state.formErrors?.length ?? 0) > 0 && (
                 <ul className="mt-1 list-inside list-disc">
                   {state.formErrors.map((e: string, i: number) => (
                     <li key={i}>{e}</li>
