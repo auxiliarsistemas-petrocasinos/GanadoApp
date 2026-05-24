@@ -42,11 +42,13 @@ function RegistroForm({
   lotesActivos,
   open,
   onClose,
+  onSuccess,
 }: {
   registro?: Registro | null
   lotesActivos: any[]
   open: boolean
   onClose: () => void
+  onSuccess: () => void
 }) {
   const isEditing = !!registro
   const action = isEditing ? editarRegistro : crearRegistro
@@ -54,12 +56,12 @@ function RegistroForm({
 
   useEffect(() => {
     if (state?.success && open) {
-      onClose()
+      onSuccess()
     }
-  }, [state?.success, open, onClose])
+  }, [state?.success, open, onSuccess])
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
       <DialogContent className="sm:max-w-[600px] p-0">
         <DialogHeader className="px-8 pt-8 pb-4">
           <DialogTitle>
@@ -267,6 +269,11 @@ export default function RegistrosPage() {
   const handleCloseForm = () => {
     setShowForm(false)
     setEditingRegistro(null)
+  }
+
+  const handleSuccess = () => {
+    setShowForm(false)
+    setEditingRegistro(null)
     fetchRegistros()
   }
 
@@ -331,6 +338,7 @@ export default function RegistrosPage() {
         lotesActivos={lotesActivos}
         open={showForm || !!editingRegistro}
         onClose={handleCloseForm}
+        onSuccess={handleSuccess}
       />
 
       {/* Diálogo de Confirmación de Eliminación */}
