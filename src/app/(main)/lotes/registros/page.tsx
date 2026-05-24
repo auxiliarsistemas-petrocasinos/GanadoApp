@@ -302,7 +302,7 @@ export default function RegistrosPage() {
         )}
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Select value={selectedLoteId} onValueChange={setSelectedLoteId}>
+          <Select value={selectedLoteId} onValueChange={(v) => { if (v) setSelectedLoteId(v) }}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar por lote" />
             </SelectTrigger>
