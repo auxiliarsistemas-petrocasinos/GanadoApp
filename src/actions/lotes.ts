@@ -16,13 +16,13 @@ export async function crearLote(data: unknown) {
     const validado = loteSchema.parse(data)
     const supabase = getSupabaseAdmin()
 
-    const { data: usuario } = await supabase
+    const { data: usuario, error: userError } = await supabase
       .from('usuarios')
       .select('id, granja_id')
       .limit(1)
       .single()
 
-    if (!usuario) throw new Error("Usuario sin granja")
+    if (!usuario) throw new Error("Usuario sin granja: " + (userError ? JSON.stringify(userError) : 'No user found'))
 
     const { data: lote, error } = await supabase
       .from('lotes')
@@ -51,13 +51,13 @@ export async function obtenerLotes(activos?: boolean) {
   try {
     const supabase = getSupabaseAdmin()
 
-    const { data: usuario } = await supabase
+    const { data: usuario, error: userError } = await supabase
       .from('usuarios')
       .select('granja_id')
       .limit(1)
       .single()
 
-    if (!usuario) throw new Error("Usuario sin granja")
+    if (!usuario) throw new Error("Usuario sin granja: " + (userError ? JSON.stringify(userError) : 'No user found'))
 
     let query = supabase
       .from('lotes')
