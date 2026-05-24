@@ -53,10 +53,10 @@ function RegistroForm({
   const [state, formAction, pending] = useActionState(action, null)
 
   useEffect(() => {
-    if (state?.success) {
+    if (state?.success && open) {
       onClose()
     }
-  }, [state?.success, onClose])
+  }, [state?.success, open, onClose])
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
