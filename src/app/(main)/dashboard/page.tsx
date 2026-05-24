@@ -146,7 +146,9 @@ export default function DashboardPage() {
           <span className="text-sm font-medium">Lote Activo:</span>
           <Select value={selectedLoteId} onValueChange={(v) => { if (v) setSelectedLoteId(v) }}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Seleccionar lote" />
+              <SelectValue placeholder="Seleccionar lote">
+                {lotes.find(l => l.id === selectedLoteId)?.nombre ?? 'Seleccionar lote'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {lotes.map(lote => (
