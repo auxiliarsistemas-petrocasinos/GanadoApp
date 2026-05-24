@@ -99,3 +99,24 @@ export async function toggleLoteActivo(id: string, activo: boolean) {
     return { success: false, error: error.message || String(error) }
   }
 }
+
+export async function eliminarLote(id: string) {
+  try {
+    const supabase = getSupabaseAdmin()
+
+    const { error } = await supabase
+      .from('lotes')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+
+    revalidatePath('/lotes')
+    revalidatePath('/registros')
+    revalidatePath('/dashboard')
+
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message || String(error) }
+  }
+}
