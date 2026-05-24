@@ -223,7 +223,10 @@ export default function RegistrosPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingRegistro, setEditingRegistro] = useState<Registro | null>(null)
-  
+  // Incrementar esta key cada vez que abrimos el form fuerza un remount limpio
+  // y evita que el state de useActionState quede "pegado" del submit anterior
+  const [formKey, setFormKey] = useState(0)
+
   // Custom delete modal state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [registroToDelete, setRegistroToDelete] = useState<string | null>(null)
@@ -264,6 +267,18 @@ export default function RegistrosPage() {
     } else {
       setDeleteError(result.error || 'Ocurrió un error al eliminar el registro')
     }
+  }
+
+  const openNewForm = () => {
+    setEditingRegistro(null)
+    setFormKey(k => k + 1)  // remount limpio
+    setShowForm(true)
+  }
+
+  const openEditForm = (r: Registro) => {
+    setEditingRegistro(r)
+    setFormKey(k => k + 1)  // remount limpio
+    setShowForm(true)
   }
 
   const handleCloseForm = () => {
@@ -320,7 +335,7 @@ export default function RegistrosPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={() => setShowForm(true)} disabled={lotesActivos.length === 0} className="bg-[#FF6A23] hover:bg-[#FF6A23]/90 text-white font-bold">
+          <Button onClick={openNewForm} disabled={lotesActivos.length === 0} className="bg-[#FF6A23] hover:bg-[#FF6A23]/90 text-white font-bold">
             <Plus className="mr-2 h-4 w-4" />
             NUEVO REGISTRO
           </Button>
@@ -334,9 +349,10 @@ export default function RegistrosPage() {
       )}
 
       <RegistroForm
+        key={formKey}
         registro={editingRegistro}
         lotesActivos={lotesActivos}
-        open={showForm || !!editingRegistro}
+        open={showForm}
         onClose={handleCloseForm}
         onSuccess={handleSuccess}
       />
@@ -425,7 +441,7 @@ export default function RegistrosPage() {
                     <td className="px-5 py-4 text-right text-green-600 font-bold">{Number(r.alimento_bultos_ingresados || 0) > 0 ? `+${Number(r.alimento_bultos_ingresados).toFixed(1)}` : '—'}</td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => { setEditingRegistro(r); setShowForm(true) }} className="rounded-lg p-2 text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" title="Editar">
+                        <button onClick={() => openEditForm(r)} className="rounded-lg p-2 text-slate-400 hover:bg-primary/10 hover:text-primary transition-colors" title="Editar">
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button onClick={() => handleDeleteClick(r.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
