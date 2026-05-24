@@ -144,7 +144,7 @@ export default function DashboardPage() {
         
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">Lote Activo:</span>
-          <Select value={selectedLoteId} onValueChange={setSelectedLoteId}>
+          <Select value={selectedLoteId} onValueChange={(v) => { if (v) setSelectedLoteId(v) }}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Seleccionar lote" />
             </SelectTrigger>
