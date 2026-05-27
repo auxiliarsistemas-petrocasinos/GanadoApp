@@ -31,8 +31,9 @@ export default function LoginPage() {
 
       // Login exitoso -> ir a dashboard
       router.push('/dashboard')
-    } catch (err: any) {
-      setError(err.message || String(err))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      setError(message)
     } finally {
       setLoading(false)
     }

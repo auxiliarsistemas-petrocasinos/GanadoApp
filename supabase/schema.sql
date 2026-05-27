@@ -91,6 +91,7 @@ FOR EACH ROW EXECUTE FUNCTION audit_registros_gallinas();
 ALTER TABLE registros_gallinas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE granjas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE registros_auditoria ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Usuarios ven solo sus registros
 CREATE POLICY "Users see their granja records"
@@ -126,5 +127,14 @@ CREATE POLICY "Users see their profile"
 CREATE POLICY "Users see their granjas"
   ON granjas FOR SELECT
   USING (propietario_id = auth.uid());
+
+-- Policy: Auditoría visible solo para admins de la granja
+CREATE POLICY "Admins see their granja audit logs"
+  ON registros_auditoria FOR SELECT
+  USING (granja_id IN (
+    SELECT granja_id FROM usuarios
+    WHERE auth_user_id = auth.uid()
+      AND rol = 'admin'
+  ));
 
 COMMIT;

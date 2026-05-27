@@ -1,23 +1,41 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
 import { registroGallinasSchema } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+async function getSessionContext() {
+  const supabase = await createServerSupabaseClient()
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    throw new Error('No autorizado')
+  }
+
+  const { data: usuario, error: profileError } = await supabase
+    .from('usuarios')
+    .select('id, granja_id, rol')
+    .eq('auth_user_id', user.id)
+    .single()
+
+  if (profileError || !usuario) {
+    throw new Error('Perfil de usuario no encontrado')
+  }
+
+  return { supabase, user, usuario }
 }
 
-function parseCleanInt(val: any): number {
+function parseCleanInt(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0
   const str = String(val).replace(/[\.,\s]/g, '')
   return parseInt(str, 10) || 0
 }
 
-function parseCleanFloat(val: any): number {
+function parseCleanFloat(val: unknown): number {
   if (val === null || val === undefined || val === '') return 0
   let str = String(val).trim()
   
@@ -38,8 +56,17 @@ function parseCleanFloat(val: any): number {
 }
 
 // 1. CREAR REGISTRO
-export async function crearRegistro(prevState: any, formData: FormData) {
-  const supabase = getSupabaseAdmin()
+export async function crearRegistro(prevState: unknown, formData: FormData) {
+  let supabase
+  let usuario
+  try {
+    const ctx = await getSessionContext()
+    supabase = ctx.supabase
+    usuario = ctx.usuario
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return { success: false, error: message || 'No autorizado' }
+  }
 
   const rawData = {
     lote_id: formData.get('lote_id') as string,
@@ -67,6 +94,7 @@ export async function crearRegistro(prevState: any, formData: FormData) {
     .from('lotes')
     .select('granja_id, cantidad_inicial')
     .eq('id', validado.data.lote_id)
+    .eq('granja_id', usuario.granja_id)
     .single()
 
   if (loteError || !lote) {
@@ -112,6 +140,7 @@ export async function crearRegistro(prevState: any, formData: FormData) {
       ...validado.data,
       granja_id: lote.granja_id,
       cantidad_gallinas,
+      created_by_user_id: usuario.id,
     })
     .select()
     .single()
@@ -134,11 +163,12 @@ export async function obtenerRegistros(filtros?: {
   limit?: number
   offset?: number
 }) {
-  const supabase = getSupabaseAdmin()
+  const { supabase, usuario } = await getSessionContext()
 
   let query = supabase
     .from('registros_gallinas')
     .select('*, lotes(nombre)', { count: 'exact' })
+    .eq('granja_id', usuario.granja_id)
     .order('fecha', { ascending: false })
 
   if (filtros?.lote_id) {
@@ -166,10 +196,19 @@ export async function obtenerRegistros(filtros?: {
 
 // 3. EDITAR REGISTRO
 export async function editarRegistro(
-  prevState: any,
+  prevState: unknown,
   formData: FormData
 ) {
-  const supabase = getSupabaseAdmin()
+  let supabase
+  let usuario
+  try {
+    const ctx = await getSessionContext()
+    supabase = ctx.supabase
+    usuario = ctx.usuario
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return { success: false, error: message || 'No autorizado' }
+  }
   const id = formData.get('id') as string
 
   const rawData = {
@@ -198,6 +237,7 @@ export async function editarRegistro(
     .from('lotes')
     .select('granja_id, cantidad_inicial')
     .eq('id', validado.data.lote_id)
+    .eq('granja_id', usuario.granja_id)
     .single()
 
   const { data: registrosAnteriores } = await supabase
@@ -219,6 +259,7 @@ export async function editarRegistro(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
+    .eq('granja_id', usuario.granja_id)
     .select()
     .single()
 
@@ -234,12 +275,13 @@ export async function editarRegistro(
 
 // 4. ELIMINAR REGISTRO
 export async function eliminarRegistro(id: string) {
-  const supabase = getSupabaseAdmin()
+  const { supabase, usuario } = await getSessionContext()
 
   const { error } = await supabase
     .from('registros_gallinas')
     .delete()
     .eq('id', id)
+    .eq('granja_id', usuario.granja_id)
 
   if (error) {
     return { success: false, error: error.message }
@@ -253,7 +295,7 @@ export async function eliminarRegistro(id: string) {
 
 // 5. OBTENER DATOS PARA DASHBOARD (últimos 30 días)
 export async function obtenerDatosDashboard(loteId: string) {
-  const supabase = getSupabaseAdmin()
+  const { supabase, usuario } = await getSessionContext()
 
   if (!loteId) {
     return { success: false, error: 'Se requiere un lote_id', data: [] }
@@ -263,6 +305,7 @@ export async function obtenerDatosDashboard(loteId: string) {
     .from('registros_gallinas')
     .select('*')
     .eq('lote_id', loteId)
+    .eq('granja_id', usuario.granja_id)
     .order('fecha', { ascending: false })
     .limit(60) // Suficientes para 2 meses de tendencia
 

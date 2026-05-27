@@ -1,28 +1,38 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
 import { loteSchema } from '@/lib/validations'
 import { revalidatePath } from 'next/cache'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+async function getSessionContext() {
+  const supabase = await createServerSupabaseClient()
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    throw new Error('No autorizado')
+  }
+
+  const { data: usuario, error: profileError } = await supabase
+    .from('usuarios')
+    .select('id, granja_id, rol')
+    .eq('auth_user_id', user.id)
+    .single()
+
+  if (profileError || !usuario) {
+    throw new Error('Perfil de usuario no encontrado')
+  }
+
+  return { supabase, user, usuario }
 }
 
 export async function crearLote(data: unknown) {
   try {
     const validado = loteSchema.parse(data)
-    const supabase = getSupabaseAdmin()
-
-    const { data: usuario, error: userError } = await supabase
-      .from('usuarios')
-      .select('id, granja_id')
-      .limit(1)
-      .single()
-
-    if (!usuario) throw new Error("Usuario sin granja: " + (userError ? JSON.stringify(userError) : 'No user found'))
+    const { supabase, usuario } = await getSessionContext()
 
     const { data: lote, error } = await supabase
       .from('lotes')
@@ -42,22 +52,15 @@ export async function crearLote(data: unknown) {
     revalidatePath('/dashboard')
     
     return { success: true, lote }
-  } catch (error: any) {
-    return { success: false, error: error.message || String(error) }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { success: false, error: message }
   }
 }
 
 export async function obtenerLotes(activos?: boolean) {
   try {
-    const supabase = getSupabaseAdmin()
-
-    const { data: usuario, error: userError } = await supabase
-      .from('usuarios')
-      .select('granja_id')
-      .limit(1)
-      .single()
-
-    if (!usuario) throw new Error("Usuario sin granja: " + (userError ? JSON.stringify(userError) : 'No user found'))
+    const { supabase, usuario } = await getSessionContext()
 
     let query = supabase
       .from('lotes')
@@ -74,19 +77,21 @@ export async function obtenerLotes(activos?: boolean) {
     if (error) throw error
 
     return { success: true, data }
-  } catch (error: any) {
-    return { success: false, error: error.message || String(error) }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { success: false, error: message }
   }
 }
 
 export async function toggleLoteActivo(id: string, activo: boolean) {
   try {
-    const supabase = getSupabaseAdmin()
+    const { supabase, usuario } = await getSessionContext()
 
     const { error } = await supabase
       .from('lotes')
       .update({ activo })
       .eq('id', id)
+      .eq('granja_id', usuario.granja_id)
 
     if (error) throw error
 
@@ -95,19 +100,21 @@ export async function toggleLoteActivo(id: string, activo: boolean) {
     revalidatePath('/dashboard')
 
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || String(error) }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { success: false, error: message }
   }
 }
 
 export async function eliminarLote(id: string) {
   try {
-    const supabase = getSupabaseAdmin()
+    const { supabase, usuario } = await getSessionContext()
 
     const { error } = await supabase
       .from('lotes')
       .delete()
       .eq('id', id)
+      .eq('granja_id', usuario.granja_id)
 
     if (error) throw error
 
@@ -116,7 +123,8 @@ export async function eliminarLote(id: string) {
     revalidatePath('/dashboard')
 
     return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message || String(error) }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { success: false, error: message }
   }
 }

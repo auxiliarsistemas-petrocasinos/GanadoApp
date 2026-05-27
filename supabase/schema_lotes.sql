@@ -44,3 +44,9 @@ CREATE POLICY "Users can update their granja lotes"
   USING (granja_id IN (
     SELECT granja_id FROM usuarios WHERE auth_user_id = auth.uid()
   ));
+
+CREATE POLICY "Users can delete their granja lotes"
+  ON lotes FOR DELETE
+  USING (granja_id IN (
+    SELECT granja_id FROM usuarios WHERE auth_user_id = auth.uid()
+  ));
